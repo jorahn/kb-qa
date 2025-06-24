@@ -4,10 +4,10 @@ version = "0.1.0"
 description = "Extract high-quality QA pairs from German industry documents using Azure OpenAI"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-python = "^3.12"
+packages = [{include = "dresokb", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.10"
 pymupdf = "^1.24.0"
 openai = "^1.12.0"
 click = "^8.1.7"
@@ -37,7 +37,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py310"
 select = [
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings
@@ -58,7 +58,7 @@ ignore = [
 known-first-party = ["dresokb"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
