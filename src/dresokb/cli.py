@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 from openai import AuthenticationError, BadRequestError, RateLimitError
 from rich.console import Console
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .generators import IterativeRefinement, QAGenerator
 from .models import AzureOpenAIClient
@@ -230,8 +230,6 @@ async def process_files(
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TimeRemainingColumn(),
         console=console,
     ) as progress:
         # Process files one by one (could be parallelized with semaphore)
