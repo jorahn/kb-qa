@@ -1,0 +1,19 @@
+azure:
+  endpoint: "https://your-instance.openai.azure.com/"
+  api_version: "2024-02-01"
+  deployments:
+    processor: "gpt-4-turbo"  # GPT-4.1 deployment name
+    generator: "o3"           # O3 deployment name
+
+processing:
+  max_pages_per_batch: 10
+  max_retries: 3
+  timeout_seconds: 300
+
+qa_generation:
+  max_difficulty: 5
+  min_qa_per_page: 3
+  max_qa_per_page: 10
+  temperature:
+    processor: 0.1
+    generator: 0.3

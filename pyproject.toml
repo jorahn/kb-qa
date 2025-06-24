@@ -1,0 +1,73 @@
+[tool.poetry]
+name = "dresokb"
+version = "0.1.0"
+description = "Extract high-quality QA pairs from German industry documents using Azure OpenAI"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+python = "^3.12"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pymupdf = "^1.24.0"
+openai = "^1.12.0"
+click = "^8.1.7"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+httpx = "^0.26.0"
+rich = "^13.7.0"
+python-docx = "^1.1.0"
+openpyxl = "^3.1.2"
+pyyaml = "^6.0.1"
+python-dotenv = "^1.0.0"
+tenacity = "^8.2.3"
+aiofiles = "^23.2.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+ruff = "^0.2.0"
+mypy = "^1.8.0"
+types-pyyaml = "^6.0.12.12"
+types-aiofiles = "^23.2.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "UP",    # pyupgrade
+    "ARG",   # flake8-unused-arguments
+    "SIM",   # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.isort]
+known-first-party = ["dresokb"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --cov=dresokb --cov-report=term-missing"
+
+[tool.poetry.scripts]
+dresokb = "dresokb.cli:main"
