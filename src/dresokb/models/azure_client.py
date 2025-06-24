@@ -1,12 +1,9 @@
 """Azure OpenAI client wrapper with retry logic and configuration."""
 
 import base64
-import io
-import os
-from typing import Any, Optional
 
 from openai import AsyncAzureOpenAI
-from pydantic import BaseModel, Field
+from pydantic import Field
 from pydantic_settings import BaseSettings
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -31,9 +28,9 @@ class AzureConfig(BaseSettings):
 class AzureOpenAIClient:
     """Wrapper for Azure OpenAI API with retry logic."""
 
-    def __init__(self, config: Optional[AzureConfig] = None):
+    def __init__(self, config: AzureConfig | None = None) -> None:
         """Initialize Azure OpenAI client."""
-        self.config = config or AzureConfig()
+        self.config = config or AzureConfig()  # type: ignore[call-arg]
         self.client = AsyncAzureOpenAI(
             azure_endpoint=self.config.endpoint,
             api_key=self.config.api_key,
@@ -48,18 +45,21 @@ class AzureOpenAIClient:
         self, text: str, image_bytes: bytes, page_num: int
     ) -> str:
         """Process a PDF page with text and image for OCR correction.
-        
+
         Args:
+        ----
             text: Extracted text from PDF (may have OCR errors)
             image_bytes: PNG image of the page
             page_num: Page number for context
-            
+
         Returns:
+        -------
             Clean markdown text
+
         """
         # Encode image to base64
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-        
+
         messages = [
             {
                 "role": "system",
@@ -89,7 +89,7 @@ class AzureOpenAIClient:
 
         response = await self.client.chat.completions.create(
             model=self.config.processor_deployment,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             temperature=0.1,
             max_tokens=4000,
         )
@@ -104,17 +104,20 @@ class AzureOpenAIClient:
         self, content: str, difficulty: int, existing_questions: list[str]
     ) -> list[dict[str, str]]:
         """Generate QA pairs from content at specified difficulty level.
-        
+
         Args:
+        ----
             content: Markdown content to generate QA from
             difficulty: Difficulty level (1-5)
             existing_questions: List of existing questions to avoid duplicates
-            
+
         Returns:
+        -------
             List of QA pairs with question, answer, and context
+
         """
         existing_q_str = "\n".join(f"- {q}" for q in existing_questions) if existing_questions else "None"
-        
+
         messages = [
             {
                 "role": "system",
@@ -155,7 +158,7 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
             },
         ]
 
-        response = await self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(  # type: ignore[call-overload]
             model=self.config.generator_deployment,
             messages=messages,
             temperature=0.3,
@@ -171,5 +174,5 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
             if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:
                 qa_pairs = qa_pairs["qa_pairs"]
             return qa_pairs if isinstance(qa_pairs, list) else []
-        except Exception:
+        except Exception:  # noqa: BLE001
             return []

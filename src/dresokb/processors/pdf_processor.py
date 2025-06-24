@@ -1,19 +1,19 @@
 """PDF processor using PyMuPDF with LLM-based OCR."""
 
-import io
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator, Optional
 
 import pymupdf
 
-from ..models import AzureOpenAIClient
+from dresokb.models import AzureOpenAIClient
+
 from .base_processor import BaseProcessor, ProcessedPage
 
 
 class PDFProcessor(BaseProcessor):
     """Process PDF files using PyMuPDF and Azure OpenAI for OCR."""
 
-    def __init__(self, file_path: Path, client: Optional[AzureOpenAIClient] = None):
+    def __init__(self, file_path: Path, client: AzureOpenAIClient | None = None) -> None:
         """Initialize PDF processor."""
         super().__init__(file_path)
         self.client = client or AzureOpenAIClient()
@@ -22,19 +22,19 @@ class PDFProcessor(BaseProcessor):
         """Check if processor supports PDF format."""
         return file_extension.lower() == ".pdf"
 
-    async def process(self) -> AsyncIterator[ProcessedPage]:
+    async def process(self) -> AsyncIterator[ProcessedPage]:  # type: ignore[override]
         """Process PDF and yield pages with LLM-enhanced OCR."""
         doc = pymupdf.open(str(self.file_path))
-        
+
         try:
             for page_num, page in enumerate(doc, start=1):
                 # Extract text
                 text = page.get_text()
-                
+
                 # Render page as image for OCR
                 pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))  # 2x scale for better quality
                 img_data = pix.tobytes("png")
-                
+
                 # Process with LLM for OCR correction
                 if text.strip():  # If there's extracted text, use LLM to correct it
                     markdown_content = await self.client.process_page_with_ocr(
@@ -49,14 +49,14 @@ class PDFProcessor(BaseProcessor):
                         image_bytes=img_data,
                         page_num=page_num
                     )
-                
+
                 yield ProcessedPage(
                     page_num=page_num,
                     content=markdown_content,
                     source_file=str(self.file_path),
                     has_image=True
                 )
-                
+
         finally:
             doc.close()
 
@@ -68,6 +68,6 @@ class PDFProcessor(BaseProcessor):
             if len(batch) >= batch_size:
                 yield batch
                 batch = []
-        
+
         if batch:  # Yield remaining pages
             yield batch
