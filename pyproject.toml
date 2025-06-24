@@ -122,7 +122,10 @@ ignore = [
     "S607",    # starting a process with a partial executable path
     "COM812",  # trailing comma missing (conflicts with formatter)
     "ISC001",  # implicitly concatenated string literals on one line (conflicts with formatter)
-    "PERF401", # use list comprehension - can be overly strict for readability
+    "PLR0911", # too many return statements (acceptable for CLI error handling)
+    "PLR0912", # too many branches (acceptable for complex business logic)  
+    "PLR0915", # too many statements (acceptable for comprehensive functions)
+    "BLE001",  # broad exception handling (intentional for CLI robustness)
 ]
 
 [tool.ruff.lint.isort]

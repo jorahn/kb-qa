@@ -2,9 +2,10 @@
 
 
 from dresokb.models import AzureOpenAIClient
+from dresokb.models.qa_models import QAPair
 from dresokb.processors.base_processor import ProcessedPage
 
-from .qa_generator import QAGenerator, QAPair
+from .qa_generator import QAGenerator
 
 
 class IterativeRefinement:

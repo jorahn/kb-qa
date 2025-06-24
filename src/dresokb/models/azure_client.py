@@ -2,11 +2,10 @@
 
 import base64
 
-from openai import AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI, BadRequestError, RateLimitError
 from pydantic import Field
 from pydantic_settings import BaseSettings
-from openai import BadRequestError, AuthenticationError, RateLimitError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 
 class AzureConfig(BaseSettings):
@@ -37,21 +36,22 @@ class AzureOpenAIClient:
             api_key=self.config.api_key,
             api_version=self.config.api_version,
         )
-        
+
         # Store configuration for debugging (removed print statements to avoid CLI clutter)
-    
+
     async def validate_configuration(self) -> bool:
         """Validate the Azure OpenAI configuration by making a simple test call."""
         try:
             # Simple test with minimal request
-            response = await self.client.chat.completions.create(
+            await self.client.chat.completions.create(
                 model=self.config.processor_deployment,
                 messages=[{"role": "user", "content": "Hello"}],
                 max_completion_tokens=5,
             )
-            return True
         except Exception:
             return False
+        else:
+            return True
 
     @retry(
         stop=stop_after_attempt(2),  # Reduced attempts for faster failure
@@ -102,17 +102,13 @@ class AzureOpenAIClient:
             },
         ]
 
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.config.processor_deployment,
-                messages=messages,  # type: ignore[arg-type]
-                max_completion_tokens=4000,
-            )
+        response = await self.client.chat.completions.create(
+            model=self.config.processor_deployment,
+            messages=messages,  # type: ignore[arg-type]
+            max_completion_tokens=4000,
+        )
 
-            return response.choices[0].message.content or ""
-        except BadRequestError:
-            # Re-raise for immediate error handling in CLI
-            raise
+        return response.choices[0].message.content or ""
 
     @retry(
         stop=stop_after_attempt(2),  # Reduced attempts for faster failure
@@ -196,22 +192,19 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
                 if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:
                     qa_pairs = qa_pairs["qa_pairs"]
                 return qa_pairs if isinstance(qa_pairs, list) else []
-            except Exception:  # noqa: BLE001
+            except Exception:
                 return []
         except BadRequestError:
             # Try without response_format as fallback for compatibility
-            try:
-                response = await self.client.chat.completions.create(  # type: ignore[call-overload]
-                    model=self.config.generator_deployment,
-                    messages=messages,
-                    max_completion_tokens=2000,
-                )
-                content = response.choices[0].message.content or "[]"
-                import json
-                qa_pairs = json.loads(content)
-                if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:
-                    qa_pairs = qa_pairs["qa_pairs"]
-                return qa_pairs if isinstance(qa_pairs, list) else []
-            except Exception:  # noqa: BLE001
-                # If fallback also fails, re-raise the original error for CLI handling
-                raise
+            response = await self.client.chat.completions.create(
+                model=self.config.generator_deployment,
+                messages=messages,  # type: ignore[arg-type]
+                max_completion_tokens=2000,
+            )
+            content = response.choices[0].message.content or "[]"
+            import json
+
+            qa_pairs = json.loads(content)
+            if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:
+                qa_pairs = qa_pairs["qa_pairs"]
+            return qa_pairs if isinstance(qa_pairs, list) else []

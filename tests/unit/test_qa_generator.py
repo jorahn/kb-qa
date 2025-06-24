@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dresokb.generators.qa_generator import QAGenerator, QAPair
+from dresokb.generators.qa_generator import QAGenerator
+from dresokb.models.qa_models import QAPair
 from dresokb.processors.base_processor import ProcessedPage
 
 

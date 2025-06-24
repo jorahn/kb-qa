@@ -22,7 +22,7 @@ class PDFProcessor(BaseProcessor):
         """Check if processor supports PDF format."""
         return file_extension.lower() == ".pdf"
 
-    async def process(self) -> AsyncIterator[ProcessedPage]:  # type: ignore[override]
+    async def process(self) -> AsyncIterator[ProcessedPage]:  # type: ignore[override,misc]
         """Process PDF and yield pages with LLM-enhanced OCR."""
         doc = pymupdf.open(str(self.file_path))
 
