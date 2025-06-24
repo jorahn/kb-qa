@@ -41,9 +41,7 @@ class AzureOpenAIClient:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=60),
     )
-    async def process_page_with_ocr(
-        self, text: str, image_bytes: bytes, page_num: int
-    ) -> str:
+    async def process_page_with_ocr(self, text: str, image_bytes: bytes, page_num: int) -> str:
         """Process a PDF page with text and image for OCR correction.
 
         Args:
@@ -116,7 +114,9 @@ class AzureOpenAIClient:
             List of QA pairs with question, answer, and context
 
         """
-        existing_q_str = "\n".join(f"- {q}" for q in existing_questions) if existing_questions else "None"
+        existing_q_str = (
+            "\n".join(f"- {q}" for q in existing_questions) if existing_questions else "None"
+        )
 
         messages = [
             {
@@ -169,6 +169,7 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
         content = response.choices[0].message.content or "[]"
         try:
             import json
+
             qa_pairs = json.loads(content)
             # Ensure we have a list
             if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:

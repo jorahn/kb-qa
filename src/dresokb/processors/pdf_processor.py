@@ -38,23 +38,21 @@ class PDFProcessor(BaseProcessor):
                 # Process with LLM for OCR correction
                 if text.strip():  # If there's extracted text, use LLM to correct it
                     markdown_content = await self.client.process_page_with_ocr(
-                        text=text,
-                        image_bytes=img_data,
-                        page_num=page_num
+                        text=text, image_bytes=img_data, page_num=page_num
                     )
                 else:
                     # Pure OCR case - send just the image
                     markdown_content = await self.client.process_page_with_ocr(
                         text="[No text extracted - please perform OCR on the image]",
                         image_bytes=img_data,
-                        page_num=page_num
+                        page_num=page_num,
                     )
 
                 yield ProcessedPage(
                     page_num=page_num,
                     content=markdown_content,
                     source_file=str(self.file_path),
-                    has_image=True
+                    has_image=True,
                 )
 
         finally:

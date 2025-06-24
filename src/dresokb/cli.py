@@ -69,7 +69,9 @@ async def process_files(
         client = AzureOpenAIClient()
     except Exception as e:  # noqa: BLE001
         console.print(f"Error initializing Azure OpenAI client: {e}", style="red")
-        console.print("Please ensure Azure OpenAI credentials are set in environment variables or .env file")
+        console.print(
+            "Please ensure Azure OpenAI credentials are set in environment variables or .env file"
+        )
         return
 
     # Get list of files to process

@@ -29,13 +29,13 @@ def mock_azure_client():
             {
                 "question": f"Was ist Beispielfrage {difficulty}?",
                 "answer": f"Dies ist die Antwort für Schwierigkeitsgrad {difficulty}.",
-                "context": "Dies ist der relevante Kontext aus dem Dokument."
+                "context": "Dies ist der relevante Kontext aus dem Dokument.",
             },
             {
                 "question": f"Wie funktioniert Prozess {difficulty}?",
                 "answer": f"Der Prozess funktioniert auf Niveau {difficulty} so...",
-                "context": "Relevanter Absatz über den Prozess."
-            }
+                "context": "Relevanter Absatz über den Prozess.",
+            },
         ]
 
     client.process_page_with_ocr = AsyncMock(side_effect=mock_process_page)

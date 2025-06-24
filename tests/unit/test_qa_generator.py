@@ -13,33 +13,24 @@ from dresokb.processors.base_processor import ProcessedPage
 async def test_generate_from_page_filters_invalid_responses() -> None:
     """Test that invalid QA responses are filtered out properly."""
     mock_client = MagicMock()
-    mock_client.generate_qa_pairs = AsyncMock(return_value=[
-        {
-            "question": "Valid question?",
-            "answer": "Valid answer.",
-            "context": "Valid context."
-        },
-        {
-            "question": "Invalid - missing answer",
-            "context": "Has context but no answer."
-        },
-        {
-            # Empty dict
-        },
-        {
-            "question": "Another valid question?",
-            "answer": "Another valid answer.",
-            "context": "Another valid context."
-        }
-    ])
+    mock_client.generate_qa_pairs = AsyncMock(
+        return_value=[
+            {"question": "Valid question?", "answer": "Valid answer.", "context": "Valid context."},
+            {"question": "Invalid - missing answer", "context": "Has context but no answer."},
+            {
+                # Empty dict
+            },
+            {
+                "question": "Another valid question?",
+                "answer": "Another valid answer.",
+                "context": "Another valid context.",
+            },
+        ]
+    )
 
     generator = QAGenerator(mock_client)
 
-    page = ProcessedPage(
-        page_num=1,
-        content="Test content",
-        source_file="test.pdf"
-    )
+    page = ProcessedPage(page_num=1, content="Test content", source_file="test.pdf")
 
     qa_pairs = await generator.generate_from_page(page, difficulty=1)
 
@@ -57,11 +48,7 @@ async def test_generate_from_page_passes_existing_questions() -> None:
 
     generator = QAGenerator(mock_client)
 
-    page = ProcessedPage(
-        page_num=1,
-        content="Test content",
-        source_file="test.pdf"
-    )
+    page = ProcessedPage(page_num=1, content="Test content", source_file="test.pdf")
 
     existing_questions = ["Existing question 1", "Existing question 2"]
 
@@ -69,9 +56,7 @@ async def test_generate_from_page_passes_existing_questions() -> None:
 
     # Verify the client was called with correct parameters
     mock_client.generate_qa_pairs.assert_called_once_with(
-        content="Test content",
-        difficulty=2,
-        existing_questions=existing_questions
+        content="Test content", difficulty=2, existing_questions=existing_questions
     )
 
 
@@ -79,13 +64,11 @@ async def test_generate_from_page_passes_existing_questions() -> None:
 async def test_generate_from_markdown_processes_multiple_pages(tmp_path) -> None:
     """Test that markdown processing handles multiple pages correctly."""
     mock_client = MagicMock()
-    mock_client.generate_qa_pairs = AsyncMock(return_value=[
-        {
-            "question": "Test question?",
-            "answer": "Test answer.",
-            "context": "Test context."
-        }
-    ])
+    mock_client.generate_qa_pairs = AsyncMock(
+        return_value=[
+            {"question": "Test question?", "answer": "Test answer.", "context": "Test context."}
+        ]
+    )
 
     generator = QAGenerator(mock_client)
 
@@ -126,7 +109,7 @@ def test_save_as_jsonl_format_structure(tmp_path) -> None:
             context="Context 1.",
             difficulty=1,
             source_file="test.pdf",
-            page_num=1
+            page_num=1,
         ),
         QAPair(
             question="Question 2?",
@@ -134,8 +117,8 @@ def test_save_as_jsonl_format_structure(tmp_path) -> None:
             context="Context 2.",
             difficulty=2,
             source_file="test.pdf",
-            page_num=2
-        )
+            page_num=2,
+        ),
     ]
 
     output_file = tmp_path / "output.jsonl"
@@ -164,7 +147,7 @@ def test_save_as_jsonl_creates_parent_directories(tmp_path) -> None:
             context="Context.",
             difficulty=1,
             source_file="test.pdf",
-            page_num=1
+            page_num=1,
         )
     ]
 

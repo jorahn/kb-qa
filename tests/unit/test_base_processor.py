@@ -16,13 +16,13 @@ class MockProcessor(BaseProcessor):
             page_num=1,
             content="Test content page 1",
             source_file=str(self.file_path),
-            has_image=False
+            has_image=False,
         )
         yield ProcessedPage(
             page_num=2,
             content="Test content page 2",
             source_file=str(self.file_path),
-            has_image=True
+            has_image=True,
         )
 
     def supports_format(self, file_extension: str) -> bool:
