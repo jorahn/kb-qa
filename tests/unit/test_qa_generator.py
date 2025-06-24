@@ -100,7 +100,8 @@ Content for page 3.
 
 def test_save_as_jsonl_format_structure(tmp_path) -> None:
     """Test that JSONL output contains only the required fields."""
-    generator = QAGenerator(None)
+    mock_client = MagicMock()
+    generator = QAGenerator(mock_client)
 
     qa_pairs = [
         QAPair(
@@ -138,7 +139,8 @@ def test_save_as_jsonl_format_structure(tmp_path) -> None:
 
 def test_save_as_jsonl_creates_parent_directories(tmp_path) -> None:
     """Test that JSONL save creates necessary parent directories."""
-    generator = QAGenerator(None)
+    mock_client = MagicMock()
+    generator = QAGenerator(mock_client)
 
     qa_pairs = [
         QAPair(
