@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 import click
+from openai import AuthenticationError, BadRequestError, RateLimitError
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 
@@ -13,6 +14,26 @@ from .processors import PDFProcessor
 from .utils.file_handler import FileHandler
 
 console = Console()
+
+
+def get_user_friendly_error(exception: Exception) -> str:
+    """Convert technical exceptions to user-friendly messages."""
+    if isinstance(exception, BadRequestError):
+        error_msg = str(exception)
+        if "max_tokens" in error_msg:
+            return "Model configuration issue: API parameter incompatibility"
+        elif "model" in error_msg.lower():
+            return "Model not found: Check your deployment names in .env file"
+        elif "json" in error_msg.lower():
+            return "Model doesn't support structured output format"
+        else:
+            return f"API request error: {error_msg}"
+    elif isinstance(exception, AuthenticationError):
+        return "Authentication failed: Check your API key and endpoint"
+    elif isinstance(exception, RateLimitError):
+        return "Rate limit exceeded: Too many requests, please wait"
+    else:
+        return str(exception)
 
 
 async def process_single_file(
@@ -31,13 +52,27 @@ async def process_single_file(
 
         # Save as markdown
         progress.update(task_id, description=f"Converting {file_path.name} to markdown")
-        markdown_dir = data_dir / "processed"
-        markdown_path = await processor.save_as_markdown(markdown_dir)
+        try:
+            markdown_dir = data_dir / "processed"
+            markdown_path = await processor.save_as_markdown(markdown_dir)
+        except Exception as e:
+            friendly_error = get_user_friendly_error(e)
+            progress.update(task_id, description=f"❌ PDF processing failed")
+            progress.update(task_id, completed=True)
+            console.print(f"✗ {file_path.name}: PDF processing failed - {friendly_error}", style="red")
+            return 0
 
         # Generate QA pairs
         progress.update(task_id, description=f"Generating QA pairs for {file_path.name}")
-        generator = QAGenerator(client)
-        qa_pairs = await generator.generate_from_markdown(markdown_path, max_difficulty)
+        try:
+            generator = QAGenerator(client)
+            qa_pairs = await generator.generate_from_markdown(markdown_path, max_difficulty)
+        except Exception as e:
+            friendly_error = get_user_friendly_error(e)
+            progress.update(task_id, description=f"❌ QA generation failed")
+            progress.update(task_id, completed=True)
+            console.print(f"✗ {file_path.name}: QA generation failed - {friendly_error}", style="red")
+            return 0
 
         # Deduplicate
         refinement = IterativeRefinement(generator, client)
@@ -53,8 +88,10 @@ async def process_single_file(
         return len(qa_pairs)
 
     except Exception as e:  # noqa: BLE001
+        friendly_error = get_user_friendly_error(e)
+        progress.update(task_id, description=f"❌ Unexpected error")
         progress.update(task_id, completed=True)
-        console.print(f"✗ {file_path.name}: {e!s}", style="red")
+        console.print(f"✗ {file_path.name}: Unexpected error - {friendly_error}", style="red")
         return 0
 
 

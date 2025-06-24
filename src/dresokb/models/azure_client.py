@@ -5,8 +5,8 @@ import base64
 from openai import AsyncAzureOpenAI
 from pydantic import Field
 from pydantic_settings import BaseSettings
-from openai import BadRequestError
-from tenacity import retry, stop_after_attempt, wait_exponential
+from openai import BadRequestError, AuthenticationError, RateLimitError
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 
 class AzureConfig(BaseSettings):
@@ -38,12 +38,7 @@ class AzureOpenAIClient:
             api_version=self.config.api_version,
         )
         
-        # Log configuration for debugging
-        print(f"Azure OpenAI Configuration:")
-        print(f"  Endpoint: {self.config.endpoint}")
-        print(f"  API Version: {self.config.api_version}")
-        print(f"  Processor Model: {self.config.processor_deployment}")
-        print(f"  Generator Model: {self.config.generator_deployment}")
+        # Store configuration for debugging (removed print statements to avoid CLI clutter)
     
     async def validate_configuration(self) -> bool:
         """Validate the Azure OpenAI configuration by making a simple test call."""
@@ -54,15 +49,14 @@ class AzureOpenAIClient:
                 messages=[{"role": "user", "content": "Hello"}],
                 max_completion_tokens=5,
             )
-            print("✓ Configuration validation successful")
             return True
-        except Exception as e:
-            print(f"✗ Configuration validation failed: {e}")
+        except Exception:
             return False
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=60),
+        stop=stop_after_attempt(2),  # Reduced attempts for faster failure
+        wait=wait_exponential(multiplier=1, min=1, max=5),  # Faster retry intervals
+        retry=retry_if_exception_type(RateLimitError),  # Only retry rate limits, not config errors
     )
     async def process_page_with_ocr(self, text: str, image_bytes: bytes, page_num: int) -> str:
         """Process a PDF page with text and image for OCR correction.
@@ -112,24 +106,18 @@ class AzureOpenAIClient:
             response = await self.client.chat.completions.create(
                 model=self.config.processor_deployment,
                 messages=messages,  # type: ignore[arg-type]
-                temperature=0.1,
                 max_completion_tokens=4000,
             )
 
             return response.choices[0].message.content or ""
-        except BadRequestError as e:
-            # Provide more detailed error information
-            error_msg = f"Azure OpenAI API Error: {e}"
-            if hasattr(e, 'response') and e.response:
-                error_msg += f" | Response: {e.response.text if hasattr(e.response, 'text') else str(e.response)}"
-            print(f"OCR Processing Error for page {page_num}: {error_msg}")
-            print(f"Model: {self.config.processor_deployment}")
-            print(f"API Version: {self.config.api_version}")
+        except BadRequestError:
+            # Re-raise for immediate error handling in CLI
             raise
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=60),
+        stop=stop_after_attempt(2),  # Reduced attempts for faster failure
+        wait=wait_exponential(multiplier=1, min=1, max=5),  # Faster retry intervals
+        retry=retry_if_exception_type(RateLimitError),  # Only retry rate limits, not config errors
     )
     async def generate_qa_pairs(
         self, content: str, difficulty: int, existing_questions: list[str]
@@ -195,7 +183,6 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
             response = await self.client.chat.completions.create(  # type: ignore[call-overload]
                 model=self.config.generator_deployment,
                 messages=messages,
-                temperature=0.3,
                 max_completion_tokens=2000,
                 response_format={"type": "json_object"},
             )
@@ -211,21 +198,12 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
                 return qa_pairs if isinstance(qa_pairs, list) else []
             except Exception:  # noqa: BLE001
                 return []
-        except BadRequestError as e:
-            # Provide more detailed error information
-            error_msg = f"Azure OpenAI API Error: {e}"
-            if hasattr(e, 'response') and e.response:
-                error_msg += f" | Response: {e.response.text if hasattr(e.response, 'text') else str(e.response)}"
-            print(f"QA Generation Error: {error_msg}")
-            print(f"Model: {self.config.generator_deployment}")
-            print(f"API Version: {self.config.api_version}")
-            # Try without response_format for compatibility
+        except BadRequestError:
+            # Try without response_format as fallback for compatibility
             try:
-                print("Retrying without JSON response format...")
                 response = await self.client.chat.completions.create(  # type: ignore[call-overload]
                     model=self.config.generator_deployment,
                     messages=messages,
-                    temperature=0.3,
                     max_completion_tokens=2000,
                 )
                 content = response.choices[0].message.content or "[]"
@@ -235,5 +213,5 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
                     qa_pairs = qa_pairs["qa_pairs"]
                 return qa_pairs if isinstance(qa_pairs, list) else []
             except Exception:  # noqa: BLE001
-                print("Fallback also failed, returning empty list")
-                return []
+                # If fallback also fails, re-raise the original error for CLI handling
+                raise
