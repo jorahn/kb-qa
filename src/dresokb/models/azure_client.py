@@ -14,15 +14,18 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 class AzureConfig(BaseSettings):
     """Azure OpenAI configuration from environment variables."""
 
-    endpoint: str = Field(..., env="AZURE_OPENAI_ENDPOINT")
-    api_key: str = Field(..., env="AZURE_OPENAI_API_KEY")
-    api_version: str = Field(default="2024-02-01", env="AZURE_OPENAI_API_VERSION")
-    processor_deployment: str = Field(default="gpt-4-turbo", env="AZURE_OPENAI_PROCESSOR")
-    generator_deployment: str = Field(default="o3", env="AZURE_OPENAI_GENERATOR")
+    endpoint: str = Field(..., alias="AZURE_OPENAI_ENDPOINT")
+    api_key: str = Field(..., alias="AZURE_OPENAI_API_KEY")
+    api_version: str = Field(default="2024-02-01", alias="AZURE_OPENAI_API_VERSION")
+    processor_deployment: str = Field(default="gpt-4-turbo", alias="AZURE_OPENAI_PROCESSOR")
+    generator_deployment: str = Field(default="o3", alias="AZURE_OPENAI_GENERATOR")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+        "populate_by_name": True,
+    }
 
 
 class AzureOpenAIClient:

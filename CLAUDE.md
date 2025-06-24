@@ -18,7 +18,7 @@ DresoKB is a CLI tool for extracting high-quality question-answer pairs from Ger
 
 ### Usage
 - `poetry run python -m dresokb process <path>` - Process file or folder
-- `poetry run python -m dresokb process --output-dir ./output <path>` - Specify output directory
+- `poetry run python -m dresokb process --data-dir ./custom-data <path>` - Specify custom data directory
 - `poetry run python -m dresokb process --max-difficulty 5 <path>` - Set max difficulty level
 - `poetry run python -m dresokb process --help` - Show all options
 
@@ -49,9 +49,8 @@ DresoKB is a CLI tool for extracting high-quality question-answer pairs from Ger
 - `AZURE_OPENAI_ENDPOINT`: Azure OpenAI instance URL
 - `AZURE_OPENAI_API_KEY`: API key for authentication
 - `AZURE_OPENAI_API_VERSION`: API version (default: 2024-02-01)
-
-### Configuration File
-Create `config/azure_config.yaml` with deployment names and processing parameters.
+- `AZURE_OPENAI_PROCESSOR`: Deployment name for document processing (default: gpt-4-turbo)
+- `AZURE_OPENAI_GENERATOR`: Deployment name for QA generation (default: o3)
 
 ## Development Guidelines
 

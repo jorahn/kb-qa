@@ -24,7 +24,8 @@ class FileHandler:
         # Sort for consistent processing order
         return sorted(files)
 
-    def ensure_output_structure(self, output_dir: Path) -> None:
-        """Create output directory structure."""
-        (output_dir / "processed").mkdir(parents=True, exist_ok=True)
-        (output_dir / "qa").mkdir(parents=True, exist_ok=True)
+    def ensure_data_structure(self, data_dir: Path) -> None:
+        """Create data directory structure."""
+        (data_dir / "input").mkdir(parents=True, exist_ok=True)
+        (data_dir / "processed").mkdir(parents=True, exist_ok=True)
+        (data_dir / "output").mkdir(parents=True, exist_ok=True)

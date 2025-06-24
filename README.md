@@ -15,8 +15,8 @@ Extract high-quality question-answer pairs from German industry documents using 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/dresokb.git
-cd dresokb
+git clone https://github.com/jorahn/kb-qa.git
+cd kb-qa
 
 # Install with poetry
 poetry install
@@ -57,18 +57,19 @@ poetry run python -m dresokb process /path/to/documents/
 poetry run python -m dresokb process --help
 
 Options:
-  -o, --output-dir PATH         Output directory for processed files
-  -d, --max-difficulty INTEGER  Maximum difficulty level (1-5) [default: 3]
+  -d, --data-dir PATH           Data directory for all processing files [default: ./data]
+  -m, --max-difficulty INTEGER  Maximum difficulty level (1-5) [default: 3]
   --help                        Show this message and exit.
 ```
 
-## Output Structure
+## Directory Structure
 
 ```
-output/
+data/
+├── input/              # Place source documents here
 ├── processed/          # Markdown files from document conversion
 │   └── document.md
-└── qa/                 # JSONL files with QA pairs
+└── output/             # JSONL files with QA pairs
     └── document.jsonl
 ```
 

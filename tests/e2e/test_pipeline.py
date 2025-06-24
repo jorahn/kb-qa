@@ -63,17 +63,17 @@ def sample_pdf(tmp_path):
 @pytest.mark.asyncio
 async def test_full_pipeline(sample_pdf, mock_azure_client, tmp_path):
     """Test the complete pipeline from PDF to JSONL output."""
-    output_dir = tmp_path / "output"
+    data_dir = tmp_path / "data"
     
     with patch("dresokb.cli.AzureOpenAIClient", return_value=mock_azure_client):
         await process_files(
             input_path=sample_pdf,
-            output_dir=output_dir,
+            data_dir=data_dir,
             max_difficulty=3,
         )
     
     # Verify markdown file was created
-    markdown_file = output_dir / "processed" / "test_document.md"
+    markdown_file = data_dir / "processed" / "test_document.md"
     assert markdown_file.exists()
     
     markdown_content = markdown_file.read_text()
@@ -81,7 +81,7 @@ async def test_full_pipeline(sample_pdf, mock_azure_client, tmp_path):
     assert "Processed Content" in markdown_content
     
     # Verify QA JSONL file was created
-    qa_file = output_dir / "qa" / "test_document.jsonl"
+    qa_file = data_dir / "output" / "test_document.jsonl"
     assert qa_file.exists()
     
     # Verify QA content
@@ -113,17 +113,17 @@ async def test_folder_processing(tmp_path, mock_azure_client):
         doc.save(str(pdf_path))
         doc.close()
     
-    output_dir = tmp_path / "output"
+    data_dir = tmp_path / "data"
     
     with patch("dresokb.cli.AzureOpenAIClient", return_value=mock_azure_client):
         await process_files(
             input_path=tmp_path,
-            output_dir=output_dir,
+            data_dir=data_dir,
             max_difficulty=2,
         )
     
     # Verify all files were processed
-    qa_files = list((output_dir / "qa").glob("*.jsonl"))
+    qa_files = list((data_dir / "output").glob("*.jsonl"))
     assert len(qa_files) == 3
     
     # Verify each file has QA pairs
