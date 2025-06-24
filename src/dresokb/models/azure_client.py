@@ -5,6 +5,7 @@ import base64
 from openai import AsyncAzureOpenAI
 from pydantic import Field
 from pydantic_settings import BaseSettings
+from openai import BadRequestError
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 
@@ -36,6 +37,28 @@ class AzureOpenAIClient:
             api_key=self.config.api_key,
             api_version=self.config.api_version,
         )
+        
+        # Log configuration for debugging
+        print(f"Azure OpenAI Configuration:")
+        print(f"  Endpoint: {self.config.endpoint}")
+        print(f"  API Version: {self.config.api_version}")
+        print(f"  Processor Model: {self.config.processor_deployment}")
+        print(f"  Generator Model: {self.config.generator_deployment}")
+    
+    async def validate_configuration(self) -> bool:
+        """Validate the Azure OpenAI configuration by making a simple test call."""
+        try:
+            # Simple test with minimal request
+            response = await self.client.chat.completions.create(
+                model=self.config.processor_deployment,
+                messages=[{"role": "user", "content": "Hello"}],
+                max_completion_tokens=5,
+            )
+            print("✓ Configuration validation successful")
+            return True
+        except Exception as e:
+            print(f"✗ Configuration validation failed: {e}")
+            return False
 
     @retry(
         stop=stop_after_attempt(3),
@@ -85,14 +108,24 @@ class AzureOpenAIClient:
             },
         ]
 
-        response = await self.client.chat.completions.create(
-            model=self.config.processor_deployment,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=0.1,
-            max_tokens=4000,
-        )
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.config.processor_deployment,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=0.1,
+                max_completion_tokens=4000,
+            )
 
-        return response.choices[0].message.content or ""
+            return response.choices[0].message.content or ""
+        except BadRequestError as e:
+            # Provide more detailed error information
+            error_msg = f"Azure OpenAI API Error: {e}"
+            if hasattr(e, 'response') and e.response:
+                error_msg += f" | Response: {e.response.text if hasattr(e.response, 'text') else str(e.response)}"
+            print(f"OCR Processing Error for page {page_num}: {error_msg}")
+            print(f"Model: {self.config.processor_deployment}")
+            print(f"API Version: {self.config.api_version}")
+            raise
 
     @retry(
         stop=stop_after_attempt(3),
@@ -145,7 +178,7 @@ Content:
 Existing questions to avoid:
 {existing_q_str}
 
-Generate 3-5 QA pairs in this exact JSON format:
+Generate 3-5 QA pairs and return them as a valid JSON array in this exact format:
 [
   {{
     "question": "Clear, specific question in German",
@@ -158,22 +191,49 @@ Ensure questions are non-obvious and require expert knowledge to answer.""",
             },
         ]
 
-        response = await self.client.chat.completions.create(  # type: ignore[call-overload]
-            model=self.config.generator_deployment,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=2000,
-            response_format={"type": "json_object"},
-        )
-
-        content = response.choices[0].message.content or "[]"
         try:
-            import json
+            response = await self.client.chat.completions.create(  # type: ignore[call-overload]
+                model=self.config.generator_deployment,
+                messages=messages,
+                temperature=0.3,
+                max_completion_tokens=2000,
+                response_format={"type": "json_object"},
+            )
 
-            qa_pairs = json.loads(content)
-            # Ensure we have a list
-            if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:
-                qa_pairs = qa_pairs["qa_pairs"]
-            return qa_pairs if isinstance(qa_pairs, list) else []
-        except Exception:  # noqa: BLE001
-            return []
+            content = response.choices[0].message.content or "[]"
+            try:
+                import json
+
+                qa_pairs = json.loads(content)
+                # Ensure we have a list
+                if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:
+                    qa_pairs = qa_pairs["qa_pairs"]
+                return qa_pairs if isinstance(qa_pairs, list) else []
+            except Exception:  # noqa: BLE001
+                return []
+        except BadRequestError as e:
+            # Provide more detailed error information
+            error_msg = f"Azure OpenAI API Error: {e}"
+            if hasattr(e, 'response') and e.response:
+                error_msg += f" | Response: {e.response.text if hasattr(e.response, 'text') else str(e.response)}"
+            print(f"QA Generation Error: {error_msg}")
+            print(f"Model: {self.config.generator_deployment}")
+            print(f"API Version: {self.config.api_version}")
+            # Try without response_format for compatibility
+            try:
+                print("Retrying without JSON response format...")
+                response = await self.client.chat.completions.create(  # type: ignore[call-overload]
+                    model=self.config.generator_deployment,
+                    messages=messages,
+                    temperature=0.3,
+                    max_completion_tokens=2000,
+                )
+                content = response.choices[0].message.content or "[]"
+                import json
+                qa_pairs = json.loads(content)
+                if isinstance(qa_pairs, dict) and "qa_pairs" in qa_pairs:
+                    qa_pairs = qa_pairs["qa_pairs"]
+                return qa_pairs if isinstance(qa_pairs, list) else []
+            except Exception:  # noqa: BLE001
+                print("Fallback also failed, returning empty list")
+                return []

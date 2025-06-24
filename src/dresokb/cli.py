@@ -67,6 +67,18 @@ async def process_files(
     # Initialize Azure client
     try:
         client = AzureOpenAIClient()
+        
+        # Validate configuration
+        console.print("Validating Azure OpenAI configuration...", style="cyan")
+        config_valid = await client.validate_configuration()
+        if not config_valid:
+            console.print("Azure OpenAI configuration validation failed!", style="red")
+            console.print("Common issues:", style="yellow")
+            console.print("• Check model deployment names are correct", style="yellow")
+            console.print("• Verify API version is supported by your models", style="yellow")
+            console.print("• Ensure your Azure OpenAI resource has the required models deployed", style="yellow")
+            return
+            
     except Exception as e:  # noqa: BLE001
         console.print(f"Error initializing Azure OpenAI client: {e}", style="red")
         console.print(
