@@ -4,68 +4,95 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DresoKB is a CLI tool for extracting high-quality question-answer pairs from German industry documents (PDFs, Word, Excel). It uses Azure OpenAI services (GPT-4.1 for document processing, O3 for QA generation) with iterative refinement to create expert-level QA datasets.
+dresokb2 is a CLI tool for extracting question-answer pairs from technical documents using Azure OpenAI. It focuses on generating QA datasets with multiple difficulty levels while maintaining language consistency.
 
 ## Commands
 
 ### Development
 - `poetry install` - Install dependencies
-- `poetry run pytest` - Run all tests
-- `poetry run pytest tests/e2e` - Run E2E tests only
+- `poetry run pytest` - Run tests
 - `poetry run ruff check .` - Lint code
 - `poetry run ruff format .` - Format code
 - `poetry run mypy .` - Type check
 
 ### Usage
-- `poetry run python -m dresokb process <path>` - Process file or folder
-- `poetry run python -m dresokb process --data-dir ./custom-data <path>` - Specify custom data directory
-- `poetry run python -m dresokb process --max-difficulty 5 <path>` - Set max difficulty level
-- `poetry run python -m dresokb process --help` - Show all options
+- `poetry run python -m dresokb2 <file>` - Process file (level 1)
+- `poetry run python -m dresokb2 <file> --max-difficulty 2` - Process with level 2
+- `poetry run python -m dresokb2 --help` - Show help
 
 ## Architecture
 
-### Document Processing Flow
-1. **Input Handling**: CLI accepts file or folder path, processes recursively
-2. **PDF Processing**: PyMuPDF extracts text and renders page images
-3. **LLM-based OCR**: GPT-4.1 corrects OCR errors and converts to clean markdown
-4. **Storage**: Processed pages saved as .md files for traceability
+### Simplified Design
+dresokb2 uses a minimal architecture with all logic in a single module:
 
-### QA Generation Flow
-1. **Initial Generation**: O3 model generates QA pairs from markdown content
-2. **Iterative Refinement**: Multiple passes with increasing difficulty (1-5)
-3. **Context Preservation**: Each QA pair includes exact source paragraph
-4. **Output Format**: JSONL files with question, answer, and context fields
+```
+src/dresokb2/
+├── __init__.py
+├── __main__.py         # Main CLI and all processing logic
+└── pdf_processor.py    # PDF to markdown conversion
+```
 
-### Key Components
-- `processors/pdf_processor.py`: PyMuPDF integration with LLM-enhanced OCR
-- `generators/qa_generator.py`: Azure O3 integration for QA generation
-- `generators/refinement.py`: Iterative difficulty scaling logic
-- `models/azure_client.py`: Azure OpenAI API wrapper with retry logic
-- `cli.py`: Click-based CLI interface with progress tracking
+### Key Components in __main__.py
+
+1. **Data Models**:
+   - `QAItem`: Question, answer, citation, difficulty
+   - `QADataset`: Collection of QA items
+   - `QualityAssessment`: For quality control
+
+2. **Processing Functions**:
+   - `extract_level1_questions()`: Generate factual questions
+   - `refine_to_level2()`: Create understanding questions
+   - `quality_control_filter()`: Remove trivial questions
+
+3. **Helper Functions**:
+   - `ask_skip_or_overwrite()`: User prompts
+   - `load_qa_items_from_jsonl()`: Load existing results
+
+### Processing Flow
+
+1. **Input**: PDF, Markdown, or text file
+2. **PDF Conversion**: If PDF, convert to markdown using GPT-4.1
+3. **Level 1 Extraction**: Generate factual questions (What, How many)
+4. **Quality Control**: Filter trivial questions using GPT-4.1
+5. **Level 2 Refinement**: Generate understanding questions (Why, How)
+6. **Output**: Separate JSONL files for each difficulty level
+
+### Azure OpenAI Deployments
+
+- `o4-mini`: Main processing (extraction and refinement)
+- `gpt-4.1`: Quality control judging
+- `gpt-4.1`: PDF OCR enhancement (default for AZURE_OPENAI_PROCESSOR)
 
 ## Configuration
 
-### Environment Variables
-- `AZURE_OPENAI_ENDPOINT`: Azure OpenAI instance URL
-- `AZURE_OPENAI_API_KEY`: API key for authentication
-- `AZURE_OPENAI_API_VERSION`: API version (default: 2024-02-01)
-- `AZURE_OPENAI_PROCESSOR`: Deployment name for document processing (default: gpt-4-turbo)
-- `AZURE_OPENAI_GENERATOR`: Deployment name for QA generation (default: o3)
+Environment variables in `.env`:
+- `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_API_VERSION` (defaults to "2024-02-01")
+- `AZURE_OPENAI_PROCESSOR` (optional, defaults to "gpt-4.1")
+
+## Key Design Principles
+
+1. **Language Consistency**: Detect and maintain source language
+2. **Incremental Processing**: Skip existing results
+3. **Quality over Quantity**: Filter out trivial questions
+4. **Self-contained Questions**: Include all context needed
+5. **Minimal Dependencies**: Only essential packages
 
 ## Development Guidelines
 
-### Adding New Document Formats
-1. Create new processor in `processors/` inheriting from `BaseProcessor`
-2. Implement `extract_content()` and `to_markdown()` methods
-3. Register processor in `processors/__init__.py`
+### Adding Features
+- Keep all logic in `__main__.py` for simplicity
+- Use pydantic models for structured data
+- Add user prompts for any destructive operations
 
 ### Testing
-- Unit tests for individual components in `tests/unit/`
-- E2E tests for full pipeline in `tests/e2e/`
-- Use fixtures in `tests/fixtures/` for sample documents
+- Test with documents in different languages
+- Verify quality control removes trivial questions
+- Check incremental processing works correctly
 
-### Performance Considerations
-- Async processing for API calls
-- Batch processing for multiple pages
-- Progress bars with Rich for user feedback
-- Configurable timeouts and retries
+### Code Style
+- No comments unless essential
+- Clear function and variable names
+- Type hints for all functions
+- Format with ruff

@@ -1,26 +1,18 @@
 [tool.poetry]
-name = "dresokb"
-version = "0.1.0"
-description = "Extract high-quality QA pairs from German industry documents using Azure OpenAI"
+name = "dresokb2"
+version = "0.2.0"
+description = "Extract high-quality QA pairs from technical documents using Azure OpenAI with difficulty levels"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-packages = [{include = "dresokb", from = "src"}]
+packages = [{include = "dresokb2", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 pymupdf = "^1.24.0"
 openai = "^1.12.0"
-click = "^8.1.7"
 pydantic = "^2.5.0"
-pydantic-settings = "^2.1.0"
-httpx = "^0.26.0"
-rich = "^13.7.0"
-python-docx = "^1.1.0"
-openpyxl = "^3.1.2"
-pyyaml = "^6.0.1"
 python-dotenv = "^1.0.0"
-tenacity = "^8.2.3"
-aiofiles = "^23.2.1"
+pydantic-ai-slim = "^0.3.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -129,7 +121,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["dresokb"]
+known-first-party = ["dresokb2"]
 force-sort-within-sections = true
 split-on-trailing-comma = true
 
@@ -156,6 +148,13 @@ max-args = 7
     "PERF401", # use list comprehension
     "PERF402", # use list or list.copy
 ]
+"src/dresokb2/__main__.py" = [
+    "T201",    # print statements are expected in CLI
+    "T20",     # print statements are expected in CLI
+]
+"src/dresokb2/pdf_processor.py" = [
+    "T201",    # print statements for progress feedback
+]
 
 [tool.mypy]
 python_version = "3.10"
@@ -172,7 +171,7 @@ disallow_incomplete_defs = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-v --cov=dresokb --cov-report=term-missing"
+addopts = "-v --cov=dresokb2 --cov-report=term-missing"
 
 [tool.poetry.scripts]
-dresokb = "dresokb.cli:main"
+dresokb2 = "dresokb2.__main__:main"
